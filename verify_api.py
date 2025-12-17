@@ -1,13 +1,27 @@
 import requests
 
+
 def get_access_token(token_url, client_id, client_secret):
+    payload = {
+        "grant_type": "client_credentials",
+        "scope": "openid",
+        "client_id": client_id,
+        "client_secret": client_secret
+    }
+
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded"
+    }
+
     response = requests.post(
         token_url,
-        auth=(client_id, client_secret),
-        data={"grant_type": "client_credentials"},
+        data=payload,
+        headers=headers,
         timeout=10
     )
     response.raise_for_status()
+
     return response.json()["access_token"]
 
 
@@ -34,7 +48,11 @@ def attempt_email_otp(api_base_url, access_token, verification_id, otp_code):
         "otp": otp_code
     }
 
-    response = requests.post(url, headers=headers, json=payload, timeout=10)
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=10
+    )
     response.raise_for_status()
     return response.json()
-
