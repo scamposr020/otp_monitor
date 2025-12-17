@@ -14,33 +14,44 @@ def main():
     client_id = os.getenv("VERIFY_CLIENT_ID")
     client_secret = os.getenv("VERIFY_CLIENT_SECRET")
     slack_webhook = os.getenv("SLACK_WEBHOOK_URL")
-    verification_id = os.getenv("VERIFY_EMAIL_OTP_VERIFICATION_ID")
 
     try:
-        # 1️⃣ Obtener token
+        # 1️⃣ Obtener access token
         access_token = get_access_token(
             token_url,
             client_id,
             client_secret
         )
 
-        # 2️⃣ Disparar OTP
-        create_email_otp(api_base_url, access_token, verification_id)
+        # 2️⃣ Crear verificación Email OTP
+        verification_response = create_email_otp(
+            api_base_url,
+            access_token
+        )
 
-        # 3️⃣ Esperar correo
+        verification_id = verification_response.get("id")
+
+        if not verification_id:
+            raise Exception("Verification ID not returned by IBM Verify")
+
+        # 3️⃣ Esperar a que llegue el correo
         time.sleep(90)
 
         # 4️⃣ Leer inbox (pendiente)
+        # Aquí luego vamos a implementar mail_reader.py
         otp_code = None
 
         if not otp_code:
             send_slack_notification(
                 slack_webhook,
-                ":rotating_light: IBM Verify OTP Monitor FAILED\n\nOTP email was not received."
+                (
+                    ":rotating_light: IBM Verify OTP Monitor FAILED\n\n"
+                    "OTP email was not received."
+                )
             )
             return
 
-        # 5️⃣ Validar OTP
+        # 5️⃣ Intentar validar OTP
         attempt_email_otp(
             api_base_url,
             access_token,
@@ -51,17 +62,22 @@ def main():
         # 6️⃣ Éxito
         send_slack_notification(
             slack_webhook,
-            ":white_check_mark: IBM Verify OTP Monitor OK\n\nOTP email received and validated."
+            (
+                ":white_check_mark: IBM Verify OTP Monitor OK\n\n"
+                "OTP email received and validated successfully."
+            )
         )
 
     except Exception as e:
         send_slack_notification(
             slack_webhook,
-            f":rotating_light: IBM Verify OTP Monitor ERROR\n\n{str(e)}"
+            (
+                ":rotating_light: IBM Verify OTP Monitor ERROR\n\n"
+                f"{str(e)}"
+            )
         )
         raise
 
 
 if __name__ == "__main__":
     main()
-
