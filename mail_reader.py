@@ -1,70 +1,38 @@
 import imaplib
 import email
-import re
-from datetime import datetime, timedelta
+import os
+import time
 
 
-def read_otp_from_outlook(
-    imap_server,
-    email_user,
-    email_password,
-    wait_minutes=5
-):
-    """
-    Connects to Outlook via IMAP and reads the latest OTP email.
-    Returns the OTP code if found, otherwise None.
-    """
+def wait_for_otp_email(timeout_seconds=120, poll_interval=10):
+    imap_server = os.environ["OUTLOOK_IMAP_SERVER"]
+    email_user = os.environ["OUTLOOK_EMAIL_USER"]
+    email_password = os.environ["OUTLOOK_EMAIL_PASSWORD"]
+
+    end_time = time.time() + timeout_seconds
 
     mail = imaplib.IMAP4_SSL(imap_server)
     mail.login(email_user, email_password)
-    mail.select("inbox")
 
-    since_date = (
-        datetime.utcnow() - timedelta(minutes=wait_minutes)
-    ).strftime("%d-%b-%Y")
+    while time.time() < end_time:
+        mail.select("inbox")
 
-    status, messages = mail.search(
-        None,
-        f'(SINCE "{since_date}")'
-    )
-
-    if status != "OK":
-        mail.logout()
-        return None
-
-    email_ids = messages[0].split()
-    email_ids.reverse()  # newest first
-
-    for email_id in email_ids:
-        _, msg_data = mail.fetch(email_id, "(RFC822)")
-        msg = email.message_from_bytes(msg_data[0][1])
-
-        subject = msg.get("Subject", "")
-
-        # Ajustar si conoces el subject exacto del OTP
-        if "OTP" not in subject.upper():
+        status, messages = mail.search(None, '(UNSEEN)')
+        if status != "OK":
+            time.sleep(poll_interval)
             continue
 
-        body = ""
+        email_ids = messages[0].split()
+        for eid in email_ids[::-1]:
+            _, msg_data = mail.fetch(eid, "(RFC822)")
+            msg = email.message_from_bytes(msg_data[0][1])
 
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    body = part.get_payload(decode=True).decode(
-                        errors="ignore"
-                    )
-                    break
-        else:
-            body = msg.get_payload(decode=True).decode(
-                errors="ignore"
-            )
+            subject = msg.get("Subject", "").lower()
+            if "otp" in subject or "verification" in subject:
+                mail.logout()
+                return True
 
-        # Buscar OTP (6 dígitos)
-        match = re.search(r"\b\d{6}\b", body)
-        if match:
-            mail.logout()
-            return match.group(0)
+        time.sleep(poll_interval)
 
     mail.logout()
-    return None
-
+    return False
