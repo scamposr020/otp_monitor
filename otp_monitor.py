@@ -5,6 +5,7 @@ from verify_api import (
     create_email_otp,
     attempt_email_otp
 )
+from mail_reader import read_otp_from_outlook
 from slack_notifier import send_slack_notification
 
 
@@ -14,6 +15,10 @@ def main():
     client_id = os.getenv("VERIFY_CLIENT_ID")
     client_secret = os.getenv("VERIFY_CLIENT_SECRET")
     slack_webhook = os.getenv("SLACK_WEBHOOK_URL")
+
+    imap_server = os.getenv("OUTLOOK_IMAP_SERVER")
+    email_user = os.getenv("OUTLOOK_EMAIL_USER")
+    email_password = os.getenv("OUTLOOK_EMAIL_PASSWORD")
 
     try:
         # 1️⃣ Obtener access token
@@ -32,14 +37,19 @@ def main():
         verification_id = verification_response.get("id")
 
         if not verification_id:
-            raise Exception("Verification ID not returned by IBM Verify")
+            raise Exception(
+                "Verification ID not returned by IBM Verify"
+            )
 
-        # 3️⃣ Esperar a que llegue el correo
+        # 3️⃣ Esperar correo
         time.sleep(90)
 
-        # 4️⃣ Leer inbox (pendiente)
-        # Aquí luego vamos a implementar mail_reader.py
-        otp_code = None
+        # 4️⃣ Leer inbox Outlook
+        otp_code = read_otp_from_outlook(
+            imap_server=imap_server,
+            email_user=email_user,
+            email_password=email_password
+        )
 
         if not otp_code:
             send_slack_notification(
@@ -65,7 +75,7 @@ def main():
             (
                 ":white_check_mark: IBM Verify OTP Monitor OK\n\n"
                 "OTP email received and validated successfully."
-            )
+                )
         )
 
     except Exception as e:
