@@ -1,72 +1,50 @@
+import os
 import requests
 
 
-def get_access_token(token_url, client_id, client_secret):
+def get_access_token():
+    token_url = os.environ["VERIFY_TOKEN_URL"]
+
     payload = {
         "grant_type": "client_credentials",
-        "scope": "openid",
-        "client_id": client_id,
-        "client_secret": client_secret
+        "client_id": os.environ["VERIFY_CLIENT_ID"],
+        "client_secret": os.environ["VERIFY_CLIENT_SECRET"],
     }
 
     headers = {
-        "accept": "application/json",
-        "content-type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
     }
 
-    response = requests.post(
-        token_url,
-        data=payload,
-        headers=headers,
-        timeout=10
-    )
-    response.raise_for_status()
+    response = requests.post(token_url, data=payload, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(
+            f"Token request failed: {response.status_code} - {response.text}"
+        )
 
     return response.json()["access_token"]
 
 
-def create_email_otp(api_base_url, access_token):
-    """
-    Creates an Email OTP verification and returns the verification response
-    (including verification_id)
-    """
-    url = f"{api_base_url}/v2.0/factors/emailotp/verifications"
+def create_email_otp_verification(access_token, email):
+    base_url = os.environ["VERIFY_API_BASE_URL"]
+    url = f"{base_url}/v2.0/factors/emailotp/verifications"
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.post(url, headers=headers, timeout=10)
-    response.raise_for_status()
-
-    return response.json()
-
-
-def attempt_email_otp(api_base_url, access_token, verification_id, otp_code):
-    """
-    Attempts to validate the Email OTP using the verification_id
-    """
-    url = (
-        f"{api_base_url}/v2.0/factors/emailotp/verifications/"
-        f"{verification_id}/attempt"
-    )
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
     payload = {
-        "otp": otp_code
+        "email": email
     }
 
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=10
-    )
-    response.raise_for_status()
+    response = requests.post(url, json=payload, headers=headers)
 
-    return response.json()
+    if response.status_code not in (200, 201):
+        raise Exception(
+            f"Create Email OTP failed: {response.status_code} - {response.text}"
+        )
+
+    return response.json()["id"]
