@@ -43,4 +43,30 @@ def create_email_otp(api_base_url, access_token):
     return response.json()
 
 
-def attempt_email_otp(api_base_url, access_token, verification_id
+def attempt_email_otp(api_base_url, access_token, verification_id, otp_code):
+    """
+    Attempts to validate the Email OTP using the verification_id
+    """
+    url = (
+        f"{api_base_url}/v2.0/factors/emailotp/verifications/"
+        f"{verification_id}/attempt"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "otp": otp_code
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=10
+    )
+    response.raise_for_status()
+
+    return response.json()
