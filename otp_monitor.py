@@ -16,7 +16,7 @@ import os
 
 print(
     "VERIFY_MONITOR_USERNAME exists:",
-    "VERIFY_MONITOR_USERNAME" in os.environ
+     os.getenv('VERIFY_MONITOR_USERNAME')
 )
 
 def main():
