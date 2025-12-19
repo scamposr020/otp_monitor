@@ -26,9 +26,13 @@ def get_access_token():
     return response.json()["access_token"]
 
 
-def create_email_otp_verification(access_token, email):
-    base_url = os.environ["VERIFY_API_BASE_URL"]
-    url = f"{base_url}/v2.0/factors/emailotp/verifications"
+def trigger_email_otp(access_token):
+    """
+    This function intentionally stops at MFA challenge.
+    The login attempt itself triggers the Email OTP.
+    """
+
+    url = f"{os.environ['VERIFY_API_BASE_URL']}/v1.0/authentication"
 
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -37,14 +41,21 @@ def create_email_otp_verification(access_token, email):
     }
 
     payload = {
-        "email": email
+        "username": os.environ["VERIFY_MONITOR_USERNAME"],
+        "password": os.environ["VERIFY_MONITOR_PASSWORD"],
     }
 
     response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code not in (200, 201):
-        raise Exception(
-            f"Create Email OTP failed: {response.status_code} - {response.text}"
-        )
+    # Expected behavior:
+    # 401 / 403 / challenge-required → OTP already sent
+    if response.status_code in (401, 403):
+        return True
 
-    return response.json()["id"]
+    # Any 2xx would be unexpected but acceptable
+    if response.status_code in (200, 201):
+        return True
+
+    raise Exception(
+        f"Authentication trigger failed: {response.status_code} - {response.text}"
+    )
