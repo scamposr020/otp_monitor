@@ -1,16 +1,28 @@
-name: IBM Verify Email OTP Monitor
+name: IBM Verify OTP Monitor
 
 on:
-  # Permite ejecutarlo manualmente (muy útil para pruebas)
-  workflow_dispatch:
-
-  # Ejecución automática cada hora
   schedule:
-    - cron: "0 * * * *"
+    - cron: '0 * * * *'   # cada hora
+  workflow_dispatch:
 
 jobs:
   otp-monitor:
     runs-on: ubuntu-latest
+
+    env:
+      VERIFY_TOKEN_URL: ${{ secrets.VERIFY_TOKEN_URL }}
+      VERIFY_CLIENT_ID: ${{ secrets.VERIFY_CLIENT_ID }}
+      VERIFY_CLIENT_SECRET: ${{ secrets.VERIFY_CLIENT_SECRET }}
+      VERIFY_API_BASE_URL: ${{ secrets.VERIFY_API_BASE_URL }}
+
+      VERIFY_MONITOR_USERNAME: ${{ secrets.VERIFY_MONITOR_USERNAME }}
+      VERIFY_MONITOR_PASSWORD: ${{ secrets.VERIFY_MONITOR_PASSWORD }}
+
+      OUTLOOK_IMAP_SERVER: ${{ secrets.OUTLOOK_IMAP_SERVER }}
+      OUTLOOK_EMAIL_USER: ${{ secrets.OUTLOOK_EMAIL_USER }}
+      OUTLOOK_EMAIL_PASSWORD: ${{ secrets.OUTLOOK_EMAIL_PASSWORD }}
+
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
       - name: Checkout repository
@@ -19,22 +31,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run IBM Verify OTP Monitor
-        run: python otp_monitor.py
-        env:
-          VERIFY_TOKEN_URL: ${{ secrets.VERIFY_TOKEN_URL }}
-          VERIFY_API_BASE_URL: ${{ secrets.VERIFY_API_BASE_URL }}
-          VERIFY_CLIENT_ID: ${{ secrets.VERIFY_CLIENT_ID }}
-          VERIFY_CLIENT_SECRET: ${{ secrets.VERIFY_CLIENT_SECRET }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-          OUTLOOK_IMAP_SERVER: ${{ secrets.OUTLOOK_IMAP_SERVER }}
-          OUTLOOK_EMAIL_USER: ${{ secrets.OUTLOOK_EMAIL_USER }}
-          OUTLOOK_EMAIL_PASSWORD: ${{ secrets.OUTLOOK_EMAIL_PASSWORD }}
+      - name: Run OTP Monitor
+        run: |
+          python otp_monitor.py
