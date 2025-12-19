@@ -12,6 +12,12 @@ def send_slack(message):
         timeout=10,
     )
 
+import os
+
+print(
+    "VERIFY_MONITOR_USERNAME exists:",
+    "VERIFY_MONITOR_USERNAME" in os.environ
+)
 
 def main():
     try:
